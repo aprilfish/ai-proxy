@@ -9,6 +9,8 @@
 - **CORS 支持**：内置跨域头，支持浏览器直接调用，OPTIONS 预检请求直接返回 204
 - **零依赖**：使用 Node.js 原生 `fetch`，无需安装任何 npm 包
 - **配置文件驱动**：修改目标域名和部署区域只需编辑 `config.json`
+- **健康检查**：内置 `/healthy` 端点，验证部署状态
+- **调试端点**：内置 `/debug` 端点，查看请求上下文和路由信息
 
 ## 项目结构
 
@@ -45,6 +47,48 @@
 - `Buffer` / `string` 类型 → 原样转发
 - `Object` 类型 → `JSON.stringify` 后转发
 - GET / HEAD / OPTIONS → 不发送 Body
+
+### Content-Encoding 处理
+
+`fetch` 在获取响应时会**自动解压** gzip / brotli / deflate 压缩的响应体。因此代理不会转发原始的 `Content-Encoding` 响应头，否则浏览器会尝试对已解压的内容二次解码，导致 `ERR_CONTENT_DECODING_FAILED`。
+
+## 内置端点
+
+### GET /healthy
+
+验证部署是否成功。
+
+```json
+{
+  "status": "ok",
+  "target": "https://openrouter.ai",
+  "region": "hnd1",
+  "timestamp": "2026-06-05T11:43:34.000Z"
+}
+```
+
+- `status` — 固定为 `"ok"`
+- `target` — `config.json` 中配置的目标地址
+- `region` — 当前部署区域
+- 即使 `target_url` 未配置也返回 200，方便验证部署本身是否正常
+
+### GET /debug
+
+输出请求诊断信息，用于排查路由和 header 问题。
+
+```json
+{
+  "req.url": "/api/v1/models",
+  "req.method": "GET",
+  "originalPath": "/api/v1/models",
+  "resolvedTarget": "https://openrouter.ai/api/v1/models",
+  "headers": { ... }
+}
+```
+
+- `req.url` — Vercel 传给函数的原始请求路径
+- `resolvedTarget` — 最终转发到的完整 URL
+- `headers` — 所有收到的请求头（用于确认 header 透传是否正确）
 
 ### 环境
 
