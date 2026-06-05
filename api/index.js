@@ -3,15 +3,25 @@ const config = require('../config.json');
 const TARGET_URL = config.target_url;
 
 module.exports = async (req, res) => {
-  if (!TARGET_URL) {
-    console.error('target_url is not set in config.json');
-    return res.status(500).json({ error: 'Server misconfiguration: target_url not set' });
-  }
-
   // Recover original path — Vercel rewrites may change req.url
   const originalPath = req.headers['x-forwarded-path']
     || req.headers['x-original-url']
     || req.url;
+
+  // Health check endpoint
+  if (originalPath === '/healthy') {
+    return res.status(200).json({
+      status: 'ok',
+      target: TARGET_URL || 'not set',
+      region: config.region || 'default',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  if (!TARGET_URL) {
+    console.error('target_url is not set in config.json');
+    return res.status(500).json({ error: 'Server misconfiguration: target_url not set' });
+  }
 
   const targetUrl = new URL(originalPath, TARGET_URL);
 
