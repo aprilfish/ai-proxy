@@ -18,6 +18,17 @@ module.exports = async (req, res) => {
     });
   }
 
+  // Debug endpoint — dump request info for diagnostics
+  if (originalPath === '/debug') {
+    return res.status(200).json({
+      'req.url': req.url,
+      'req.method': req.method,
+      originalPath,
+      resolvedTarget: TARGET_URL ? new URL(originalPath, TARGET_URL).toString() : 'TARGET_URL not set',
+      headers: req.headers,
+    });
+  }
+
   if (!TARGET_URL) {
     console.error('target_url is not set in config.json');
     return res.status(500).json({ error: 'Server misconfiguration: target_url not set' });
@@ -75,6 +86,7 @@ module.exports = async (req, res) => {
           : JSON.stringify(req.body);
     }
 
+    console.log(`[proxy] ${req.method} ${targetUrl.toString()}`);
     const response = await fetch(targetUrl.toString(), fetchOptions);
 
     // Forward safe response headers
@@ -97,10 +109,11 @@ module.exports = async (req, res) => {
     return res.send(Buffer.from(buffer));
 
   } catch (error) {
-    console.error('Proxy error:', error.message);
+    console.error(`[proxy] ${req.method} ${targetUrl.toString()} -> ${error.message}`);
     return res.status(502).json({
       error: 'Bad Gateway',
       message: error.message,
+      target: targetUrl.toString(),
     });
   }
 };
