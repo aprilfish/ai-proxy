@@ -90,7 +90,9 @@ module.exports = async (req, res) => {
     const response = await fetch(targetUrl.toString(), fetchOptions);
 
     // Forward safe response headers
-    const exposeHeaders = ['content-type', 'content-length', 'content-encoding',
+    // NOTE: content-encoding excluded — fetch auto-decompresses the body,
+    // forwarding the original encoding header would break the browser.
+    const exposeHeaders = ['content-type',
       'cache-control', 'etag', 'last-modified', 'content-disposition'];
     response.headers.forEach((value, name) => {
       if (exposeHeaders.includes(name.toLowerCase()) || name.toLowerCase().startsWith('x-')) {
